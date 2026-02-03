@@ -88,11 +88,13 @@ class DailyWeather {
   });
 
   factory DailyWeather.fromJson(Map<String, dynamic> json) {
-    List<double> toDoubles(dynamic v) =>
-        (v is List) ? v.whereType<num>().map((e) => e.toDouble()).toList() : <double>[];
+    List<double> toDoubles(dynamic v) => (v is List)
+        ? v.whereType<num>().map((e) => e.toDouble()).toList()
+        : <double>[];
 
-    List<int> toInts(dynamic v) =>
-        (v is List) ? v.whereType<num>().map((e) => e.toInt()).toList() : <int>[];
+    List<int> toInts(dynamic v) => (v is List)
+        ? v.whereType<num>().map((e) => e.toInt()).toList()
+        : <int>[];
 
     return DailyWeather(
       tempMax: toDoubles(json['temperature_2m_max']),

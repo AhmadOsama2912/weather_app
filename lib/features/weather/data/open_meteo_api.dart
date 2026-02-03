@@ -5,13 +5,14 @@ import 'open_meteo_dto.dart';
 
 class OpenMeteoApi {
   OpenMeteoApi({Dio? dio})
-      : _dio = dio ??
-            Dio(
-              BaseOptions(
-                connectTimeout: const Duration(seconds: 10),
-                receiveTimeout: const Duration(seconds: 10),
-              ),
-            );
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              connectTimeout: const Duration(seconds: 10),
+              receiveTimeout: const Duration(seconds: 10),
+            ),
+          );
 
   final Dio _dio;
 
@@ -57,7 +58,8 @@ class OpenMeteoApi {
           'latitude': latitude,
           'longitude': longitude,
           'timezone': 'auto',
-          'current': 'temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m',
+          'current':
+              'temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m',
           'daily': 'temperature_2m_max,temperature_2m_min,weather_code',
         },
       );

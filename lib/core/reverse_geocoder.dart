@@ -14,10 +14,10 @@ class ReverseGeocoder {
     final city = p.locality?.trim().isNotEmpty == true
         ? p.locality!.trim()
         : (p.subAdministrativeArea?.trim().isNotEmpty == true
-            ? p.subAdministrativeArea!.trim()
-            : (p.administrativeArea?.trim().isNotEmpty == true
-                ? p.administrativeArea!.trim()
-                : 'Current location'));
+              ? p.subAdministrativeArea!.trim()
+              : (p.administrativeArea?.trim().isNotEmpty == true
+                    ? p.administrativeArea!.trim()
+                    : 'Current location'));
 
     return (city, p.country);
   }

@@ -14,7 +14,10 @@ class WeatherRepository {
     required String displayCity,
     String? country,
   }) async {
-    final forecast = await api.fetchForecast(latitude: latitude, longitude: longitude);
+    final forecast = await api.fetchForecast(
+      latitude: latitude,
+      longitude: longitude,
+    );
 
     final minTemp = forecast.daily.tempMin.isNotEmpty
         ? forecast.daily.tempMin.first
