@@ -1,15 +1,15 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class WeatherStorage {
-  static const _kLastCity = 'weather.lastCity';
+  static const _kLastCity = 'last_city';
 
   Future<void> saveLastCity(String city) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kLastCity, city);
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString(_kLastCity, city);
   }
 
   Future<String?> getLastCity() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_kLastCity);
+    final sp = await SharedPreferences.getInstance();
+    return sp.getString(_kLastCity);
   }
 }

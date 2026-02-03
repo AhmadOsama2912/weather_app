@@ -1,87 +1,50 @@
 import 'package:dio/dio.dart';
-
-import '../../../core/app_exceptions.dart';
 import 'open_meteo_dto.dart';
 
 class OpenMeteoApi {
+  final Dio dio;
   OpenMeteoApi({Dio? dio})
-    : _dio =
-          dio ??
-          Dio(
-            BaseOptions(
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 10),
-            ),
-          );
+      : dio = dio ??
+            Dio(
+              BaseOptions(
+                connectTimeout: const Duration(seconds: 12),
+                receiveTimeout: const Duration(seconds: 12),
+              ),
+            );
 
-  final Dio _dio;
-
-  Future<GeoPlace> geocodeCity({
-    required String city,
-    required String languageCode,
-  }) async {
-    try {
-      final resp = await _dio.get(
-        'https://geocoding-api.open-meteo.com/v1/search',
-        queryParameters: {
-          'name': city,
-          'count': 1,
-          'language': languageCode,
-          'format': 'json',
-        },
-      );
-
-      final data = (resp.data as Map).cast<String, dynamic>();
-      final parsed = GeoSearchResponse.fromJson(data);
-
-      if (parsed.results.isEmpty) {
-        throw const NotFoundException('City not found');
-      }
-      return parsed.results.first;
-    } on DioException catch (e) {
-      throw NetworkException(_dioMessage(e));
-    } on AppException {
-      rethrow;
-    } catch (_) {
-      throw const UnexpectedException('Failed to parse geocoding response');
-    }
-  }
-
-  Future<ForecastResponse> fetchForecast({
+  Future<OpenMeteoForecastDto> fetchForecast({
     required double latitude,
     required double longitude,
   }) async {
-    try {
-      final resp = await _dio.get(
-        'https://api.open-meteo.com/v1/forecast',
-        queryParameters: {
-          'latitude': latitude,
-          'longitude': longitude,
-          'timezone': 'auto',
-          'current':
-              'temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m',
-          'daily': 'temperature_2m_max,temperature_2m_min,weather_code',
-        },
-      );
+    final uri = Uri.https('api.open-meteo.com', '/v1/forecast', {
+      'latitude': latitude.toString(),
+      'longitude': longitude.toString(),
+      'timezone': 'auto',
+      'forecast_days': '10',
+      'windspeed_unit': 'kmh',
+      'current':
+          'temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,pressure_msl,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m',
+      'hourly': 'temperature_2m,precipitation,weather_code',
+      'daily':
+          'temperature_2m_max,temperature_2m_min,sunrise,sunset,weather_code,precipitation_sum,uv_index_max,wind_gusts_10m_max',
+    });
 
-      final data = (resp.data as Map).cast<String, dynamic>();
-      return ForecastResponse.fromJson(data);
-    } on DioException catch (e) {
-      throw NetworkException(_dioMessage(e));
-    } catch (_) {
-      throw const UnexpectedException('Failed to parse forecast response');
-    }
+    final res = await dio.getUri(uri);
+    return OpenMeteoForecastDto.fromJson(res.data as Map<String, dynamic>);
   }
 
-  String _dioMessage(DioException e) {
-    if (e.type == DioExceptionType.connectionTimeout ||
-        e.type == DioExceptionType.receiveTimeout ||
-        e.type == DioExceptionType.sendTimeout) {
-      return 'Request timeout';
-    }
-    if (e.type == DioExceptionType.connectionError) {
-      return 'No internet connection';
-    }
-    return 'Network error';
+  Future<GeoPlaceDto> geocodeCity({
+    required String city,
+    required String languageCode,
+  }) async {
+    final uri = Uri.https('geocoding-api.open-meteo.com', '/v1/search', {
+      'name': city,
+      'count': '1',
+      'language': languageCode,
+      'format': 'json',
+    });
+
+    final res = await dio.getUri(uri);
+    return GeoPlaceDto.fromJson(res.data as Map<String, dynamic>);
   }
 }

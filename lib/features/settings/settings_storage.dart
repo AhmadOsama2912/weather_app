@@ -1,49 +1,44 @@
-import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
 
 class SettingsStorage {
-  static const _kThemeMode = 'settings.themeMode'; // system/light/dark
-  static const _kLocale = 'settings.locale'; // en/ar
-
-  Future<(ThemeMode, Locale)> load() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final themeRaw = prefs.getString(_kThemeMode) ?? 'system';
-    final localeRaw = prefs.getString(_kLocale) ?? 'en';
-
-    return (_parseThemeMode(themeRaw), Locale(localeRaw));
-  }
+  static const _kTheme = 'theme_mode';
+  static const _kLocale = 'locale_code';
 
   Future<void> saveThemeMode(ThemeMode mode) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kThemeMode, _themeModeToString(mode));
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString(_kTheme, mode.name);
+  }
+
+  Future<ThemeMode?> loadThemeMode() async {
+    final sp = await SharedPreferences.getInstance();
+    final v = sp.getString(_kTheme);
+    if (v == null) return null;
+    return ThemeMode.values.firstWhere((e) => e.name == v, orElse: () => ThemeMode.system);
   }
 
   Future<void> saveLocale(Locale locale) async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString(_kLocale, locale.languageCode);
+  }
+
+  Future<Locale?> loadLocale() async {
+    final sp = await SharedPreferences.getInstance();
+    final v = sp.getString(_kLocale);
+    if (v == null) return null;
+    return Locale(v);
+  }
+
+  // inside SettingsStorage
+  Future<void> saveLanguageCode(String code) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kLocale, locale.languageCode);
+    await prefs.setString('lang_code', code);
   }
 
-  ThemeMode _parseThemeMode(String raw) {
-    switch (raw) {
-      case 'light':
-        return ThemeMode.light;
-      case 'dark':
-        return ThemeMode.dark;
-      default:
-        return ThemeMode.system;
-    }
+  Future<String?> getLanguageCode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('lang_code');
   }
 
-  String _themeModeToString(ThemeMode mode) {
-    switch (mode) {
-      case ThemeMode.light:
-        return 'light';
-      case ThemeMode.dark:
-        return 'dark';
-      case ThemeMode.system:
-      default:
-        return 'system';
-    }
-  }
+
 }

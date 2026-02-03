@@ -1,24 +1,24 @@
 import 'package:geocoding/geocoding.dart';
 
 class ReverseGeocoder {
-  Future<(String city, String? country)> cityFromCoords({
-    required double lat,
-    required double lon,
-  }) async {
-    final placemarks = await placemarkFromCoordinates(lat, lon);
-    if (placemarks.isEmpty) {
-      return ('Current location', null);
-    }
+  Future<PlaceName> reverse(double lat, double lon) async {
+    final list = await placemarkFromCoordinates(lat, lon);
+    final p = list.isNotEmpty ? list.first : null;
 
-    final p = placemarks.first;
-    final city = p.locality?.trim().isNotEmpty == true
-        ? p.locality!.trim()
-        : (p.subAdministrativeArea?.trim().isNotEmpty == true
-              ? p.subAdministrativeArea!.trim()
-              : (p.administrativeArea?.trim().isNotEmpty == true
-                    ? p.administrativeArea!.trim()
-                    : 'Current location'));
+    final city = (p?.locality?.trim().isNotEmpty ?? false)
+        ? p!.locality!.trim()
+        : (p?.administrativeArea?.trim().isNotEmpty ?? false)
+            ? p!.administrativeArea!.trim()
+            : 'Unknown';
 
-    return (city, p.country);
+    final country = (p?.country?.trim().isNotEmpty ?? false) ? p!.country!.trim() : null;
+
+    return PlaceName(city: city, country: country);
   }
+}
+
+class PlaceName {
+  final String city;
+  final String? country;
+  const PlaceName({required this.city, required this.country});
 }

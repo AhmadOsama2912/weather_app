@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../domain/weather.dart';
+import '../domain/weather_bundle.dart';
 
 sealed class WeatherState extends Equatable {
   const WeatherState();
@@ -16,17 +16,21 @@ class WeatherLoading extends WeatherState {
 }
 
 class WeatherSuccess extends WeatherState {
-  final Weather weather;
-  const WeatherSuccess(this.weather);
+  final WeatherBundle data;
+  const WeatherSuccess(this.data);
 
   @override
-  List<Object?> get props => [weather];
+  List<Object?> get props => [data];
 }
 
 class WeatherError extends WeatherState {
   final String message;
   final bool canOpenSettings;
-  const WeatherError(this.message, {this.canOpenSettings = false});
+
+  const WeatherError({
+    required this.message,
+    this.canOpenSettings = false,
+  });
 
   @override
   List<Object?> get props => [message, canOpenSettings];

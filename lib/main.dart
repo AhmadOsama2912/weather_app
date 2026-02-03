@@ -17,22 +17,17 @@ Future<void> main() async {
   final settingsCubit = SettingsCubit(storage: SettingsStorage());
   await settingsCubit.load();
 
-  final weatherRepo = WeatherRepository(
-    api: OpenMeteoApi(),
-    storage: WeatherStorage(),
+  final weatherCubit = WeatherCubit(
+    repository: WeatherRepository(api: OpenMeteoApi(), storage: WeatherStorage()),
+    locationService: LocationService(),
+    reverseGeocoder: ReverseGeocoder(),
   );
 
   runApp(
     MultiBlocProvider(
       providers: [
         BlocProvider.value(value: settingsCubit),
-        BlocProvider(
-          create: (_) => WeatherCubit(
-            repository: weatherRepo,
-            locationService: LocationService(),
-            reverseGeocoder: ReverseGeocoder(),
-          ),
-        ),
+        BlocProvider.value(value: weatherCubit),
       ],
       child: const WeatherApp(),
     ),

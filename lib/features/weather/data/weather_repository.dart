@@ -1,5 +1,5 @@
-import '../../../core/app_exceptions.dart';
-import '../domain/weather.dart';
+import '../domain/weather_bundle.dart';
+import '../domain/weather_exceptions.dart';
 import 'open_meteo_api.dart';
 import 'weather_storage.dart';
 
@@ -7,91 +7,87 @@ class WeatherRepository {
   final OpenMeteoApi api;
   final WeatherStorage storage;
 
-  WeatherRepository({
-    required this.api,
-    required this.storage,
-  });
+  WeatherRepository({required this.api, required this.storage});
 
-  /// Fetch weather using GPS coordinates (no geocoding call).
-  /// - [displayCity] is what you want to show in UI (reverse-geocoded city name).
-  /// - Does NOT cache last city (because it’s not a searched city).
-  Future<Weather> getByCoordinates({
+  Future<WeatherBundle> getByCoordinates({
     required double latitude,
     required double longitude,
     required String displayCity,
     String? country,
   }) async {
-    final forecast = await api.fetchForecast(
-      latitude: latitude,
-      longitude: longitude,
-    );
+    final f = await api.fetchForecast(latitude: latitude, longitude: longitude);
 
-    return _buildWeather(
-      city: displayCity.trim().isEmpty ? 'Current location' : displayCity.trim(),
-      country: country,
-      forecast: forecast,
-    );
-  }
-
-  /// Fetch weather by city name using geocoding then forecast.
-  /// Caches the last searched city for better UX on next app open.
-  Future<Weather> getByCity({
-    required String city,
-    required String languageCode,
-  }) async {
-    final trimmedCity = city.trim();
-    if (trimmedCity.isEmpty) {
-      throw const NotFoundException('Empty city');
+    final now = f.current.time;
+    final hourly = <HourlyPoint>[];
+    for (var i = 0; i < f.hourly.time.length; i++) {
+      if (f.hourly.time[i].isBefore(now)) continue;
+      hourly.add(
+        HourlyPoint(
+          time: f.hourly.time[i],
+          tempC: f.hourly.temperature2m[i],
+          weatherCode: f.hourly.weatherCode[i],
+          precipitationMm: f.hourly.precipitation[i],
+        ),
+      );
+      if (hourly.length >= 12) break;
     }
 
-    final place = await api.geocodeCity(
-      city: trimmedCity,
-      languageCode: languageCode,
-    );
+    final daily = <DailyPoint>[];
+    for (var i = 0; i < f.daily.time.length; i++) {
+      daily.add(
+        DailyPoint(
+          date: f.daily.time[i],
+          minTempC: f.daily.tempMin[i],
+          maxTempC: f.daily.tempMax[i],
+          weatherCode: f.daily.weatherCode[i],
+          precipitationSumMm: f.daily.precipitationSum[i],
+          uvIndexMax: f.daily.uvIndexMax[i],
+        ),
+      );
+    }
 
-    final forecast = await api.fetchForecast(
-      latitude: place.latitude,
-      longitude: place.longitude,
-    );
-
-    final weather = _buildWeather(
-      city: place.name,
-      country: place.country,
-      forecast: forecast,
-    );
-
-    await storage.saveLastCity(trimmedCity);
-    return weather;
-  }
-
-  Future<String?> getLastCity() => storage.getLastCity();
-
-  // Private helpers
-  Weather _buildWeather({
-    required String city,
-    required String? country,
-    required dynamic forecast, // ForecastResponse type from your dto file
-  }) {
-    // "today" values fallback to current if daily arrays are empty
-    final minTemp = _firstOrNullDouble(forecast.daily.tempMin) ?? forecast.current.temperature2m;
-    final maxTemp = _firstOrNullDouble(forecast.daily.tempMax) ?? forecast.current.temperature2m;
-
-    final code = _firstOrNullInt(forecast.daily.weatherCode) ?? forecast.current.weatherCode;
-
-    return Weather(
-      city: city,
+    return WeatherBundle(
+      city: displayCity,
       country: country,
-      currentTempC: forecast.current.temperature2m,
-      minTempC: minTemp,
-      maxTempC: maxTemp,
-      humidityPercent: forecast.current.relativeHumidity2m,
-      windSpeedKmh: forecast.current.windSpeed10m,
-      weatherCode: code,
+      currentTempC: f.current.temperature2m,
+      feelsLikeC: f.current.apparentTemperature,
+      minTempC: f.daily.tempMin.first,
+      maxTempC: f.daily.tempMax.first,
+      humidityPercent: f.current.relativeHumidity2m,
+      windSpeedKmh: f.current.windSpeed10m,
+      windGustKmh: f.current.windGusts10m,
+      windDirectionDeg: f.current.windDirection10m,
+      pressureHpa: f.current.pressureMsl,
+      visibilityKm: f.current.visibility / 1000.0,
+      precipitationMm: f.current.precipitation,
+      uvIndexMax: f.daily.uvIndexMax.first,
+      sunrise: f.daily.sunrise.first,
+      sunset: f.daily.sunset.first,
+      weatherCode: f.current.weatherCode,
+      hourly: hourly,
+      daily: daily,
       updatedAt: DateTime.now(),
     );
   }
 
-  double? _firstOrNullDouble(List<double> list) => list.isNotEmpty ? list.first : null;
+  Future<WeatherBundle> getByCity({
+    required String city,
+    required String languageCode,
+  }) async {
+    final trimmed = city.trim();
+    if (trimmed.isEmpty) throw const CityNotFoundException();
 
-  int? _firstOrNullInt(List<int> list) => list.isNotEmpty ? list.first : null;
+    final place = await api.geocodeCity(city: trimmed, languageCode: languageCode);
+    final bundle = await getByCoordinates(
+      latitude: place.latitude,
+      longitude: place.longitude,
+      displayCity: place.name,
+      country: place.country,
+    );
+
+    await storage.saveLastCity(trimmed);
+    return bundle;
+  }
+
+  Future<String?> getLastCity() => storage.getLastCity();
 }
